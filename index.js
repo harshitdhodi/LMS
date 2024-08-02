@@ -7,8 +7,10 @@ const manager = require("./route/manager")
 const leadType = require("./route/leadsType")
 const statusType = require("./route/status");
 const leadSource = require("./route/leadSource")
+const image = require("./route/image")
 const count = require("./route/count")
-// const cors = require("cors")
+const contact = require("./route/message_route")
+const cors = require("cors")
 const cookieParser = require("cookie-parser");
 // const { notFound, errorHandler } = require('./middleware/errorHandler');
 const app = express();
@@ -23,7 +25,7 @@ const PORT= process.env.PORT || 4000;
 dbConnect(); 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended:false}))
-app.use(cookieParser())
+app.use(cookieParser()) 
 app.use("/api/user" , user)
 app.use("/api/lead" , lead)
 app.use("/api/manager" , manager)
@@ -31,7 +33,8 @@ app.use("/api/leadType" , leadType)
 app.use("/api/statusType" , statusType)
 app.use("/api/leadSource" , leadSource)
 app.use("/api/count" , count)
-  
+app.use("/api/image", image); 
+app.use("/api/contact", contact); 
   // Use error handler
 //   app.use(errorHandler);
 // app.use("/",(req , res) => {
