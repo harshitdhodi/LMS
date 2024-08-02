@@ -8,17 +8,17 @@ const leadType = require("./route/leadsType")
 const statusType = require("./route/status");
 const leadSource = require("./route/leadSource")
 const count = require("./route/count")
-const cors = require("cors")
+// const cors = require("cors")
 const cookieParser = require("cookie-parser");
 // const { notFound, errorHandler } = require('./middleware/errorHandler');
 const app = express();
 require("dotenv").config();
 const PORT= process.env.PORT || 4000;
 
-app.use(cors({
-  origin: 'http://localhost:5173', // Replace with your front-end origin
-  credentials: true // This allows cookies to be sent along with requests
-}));
+// app.use(cors({
+//   origin: 'http://localhost:5173', // Replace with your front-end origin
+//   credentials: true // This allows cookies to be sent along with requests
+// }));
 // MongoDB connection
 dbConnect(); 
 app.use(bodyParser.json());
