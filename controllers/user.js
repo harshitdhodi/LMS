@@ -91,7 +91,7 @@ const createUser = asyncHandler(async (req, res) => {
     console.log(token);
   
     // Respond with the token
-    res.status(200).json({ msg: "Logged in successfully", token });
+    res.status(200).json({ msg: "Logged in successfully", token, id:user._id });
   });
   
 
