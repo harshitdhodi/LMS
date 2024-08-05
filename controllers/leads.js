@@ -16,7 +16,7 @@ const createLead = asyncHandler(async (req, res) => {
     }
 
     const { firstname, lastname, email, mobile, companyname, leadInfo, status, leadsDetails } = req.body;
-    const { id } = req.query;
+    const { id } = req.user;
 
     // Determine the leadType based on the user's role
     const leadType = role === 'user' ? 'Genuine' : null;
