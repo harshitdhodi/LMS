@@ -58,29 +58,6 @@ const createLead = asyncHandler(async (req, res) => {
 
       // Send notification and capture response
       notificationResponse = await sendNotification(notificationData);
-      
-      // Add savedLead information to the notificationResponse
-      notificationResponse = {
-        ...notificationResponse,
-        savedLead
-      };
-
-      // Save notification data to Notification model
-      const newNotification = new Notification({
-        firstname,
-        lastname,
-        email,
-        mobile,
-        status,
-        byLead: role,
-        leadType,
-        companyname,
-        user: id,
-        leadInfo,
-        leadsDetails
-      });
-
-      await newNotification.save();
     } else {
       console.log("No device tokens found for the user.");
     }
