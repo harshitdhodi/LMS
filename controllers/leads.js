@@ -399,11 +399,17 @@ const createLeads = asyncHandler(async (req, res) => {
 });
 
 const getLeadByLeadtype = asyncHandler(async (req, res) => {
-  const { user } = req.query;
+  const { id: tokenUserId } = req.user; // Extract the user ID from the token
+  const { user } = req.query; // Get the user ID from the query parameters
 
   try {
-    // Find leads where leadType is 'Genuine'
-    const leads = await Leads.find({ leadType: 'Genuine', ...user });
+    // Check if the user ID from the token matches the user ID in the query params
+    if (tokenUserId.toString() !== user) {
+      return res.status(403).json({ msg: "You do not have permission to access these leads." });
+    }
+
+    // Find leads where leadType is 'Genuine' and user ID matches
+    const leads = await Leads.find({ leadType: 'Genuine', user: tokenUserId });
 
     if (!leads || leads.length === 0) {
       return res.status(404).json({ msg: 'No leads found' });
