@@ -10,6 +10,7 @@ const leadSource = require("./route/leadSource")
 const image = require("./route/image")
 const count = require("./route/count")
 const contact = require("./route/message_route")
+const notification = require("./route/notification")
 const cors = require("cors")
 const cookieParser = require("cookie-parser");
 // const { notFound, errorHandler } = require('./middleware/errorHandler');
@@ -17,10 +18,14 @@ const app = express();
 require("dotenv").config();
 const PORT= process.env.PORT || 4000;
 
-// app.use(cors({
-//   origin: 'http://localhost:5173', // Replace with your front-end origin
-//   credentials: true // This allows cookies to be sent along with requests
-// }));
+
+
+
+
+app.use(cors({
+  origin: 'http://localhost:5173', // Replace with your front-end origin
+  credentials: true // This allows cookies to be sent along with requests
+}));
 // MongoDB connection
 dbConnect(); 
 app.use(bodyParser.json());
@@ -35,6 +40,7 @@ app.use("/api/leadSource" , leadSource)
 app.use("/api/count" , count)
 app.use("/api/image", image); 
 app.use("/api/contact", contact); 
+app.use("/api/notification", notification); 
   // Use error handler
 //   app.use(errorHandler);
 // app.use("/",(req , res) => {
