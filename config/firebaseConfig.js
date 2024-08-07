@@ -4,11 +4,12 @@ const serviceAccount = require('../route/lead-management-system-245fb-firebase-a
 
 
 const initializeFirebase = () => {
-  if (!admin.apps.length) {
+  if (!admin.apps.length) {    
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       databaseURL: "https://lead-management-system-245fb-default-rtdb.firebaseio.com"
     });
+    ;
   }
 };
 
