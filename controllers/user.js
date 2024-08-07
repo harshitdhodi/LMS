@@ -175,44 +175,34 @@ const createUser = asyncHandler(async (req, res) => {
 
   // Update status fields
   const updateUserFields = asyncHandler(async (req, res) => {
-    const { id } = req.query; // Extract user ID from query parameters
-    const updates = req.body; // Extract fields to update from request body
+    const { id } = req.user;
+    const updates = req.body;
   
     try {
-      // Handle file upload
       uploadPhoto(req, res, async (err) => {
-        if (err) {
-          return res.status(400).json({ msg: "Error uploading file", error: err.message });
-        }
-  
-        // Extract user role from token (assuming it's in req.user.role)
+       
         const { role } = req.user;
-  
         if (role !== 'admin' && role !== 'user') {
           return res.status(403).json({ msg: "Permission denied. Unauthorized role." });
         }
   
-        // Fetch user by ID
         const user = await User.findById(id);
         if (!user) {
           return res.status(404).json({ msg: "User not found" });
         }
   
-        // Update user fields
         for (const key in updates) {
           if (updates.hasOwnProperty(key) && user[key] !== undefined) {
             user[key] = updates[key];
           }
         }
   
-        // If a new photo is uploaded, update the photo field
         if (req.file) {
-          user.photo = req.file.filename; // Update the photo field with the filename
+          user.photo = req.file.filename;
         }
   
         await user.save();
   
-        // Return only the updated fields
         const updatedFields = {};
         for (const key in updates) {
           if (updates.hasOwnProperty(key)) {
@@ -220,7 +210,6 @@ const createUser = asyncHandler(async (req, res) => {
           }
         }
   
-        // Include the photo field in the response if updated
         if (req.file) {
           updatedFields.photo = user.photo;
         }
