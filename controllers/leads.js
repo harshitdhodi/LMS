@@ -12,6 +12,7 @@ const createLead = asyncHandler(async (req, res) => {
   try {
     const { role } = req.user;
 
+    // Check if the role is allowed
     if (role !== 'admin' && role !== 'user') {
       return res.status(403).json({ msg: "You do not have permission to create a lead." });
     }
@@ -49,7 +50,8 @@ const createLead = asyncHandler(async (req, res) => {
 
     let notificationResponse = null; // Variable to store the notification response
 
-    if (deviceTokens && deviceTokens.length > 0) {
+    // Send notification only if the role is admin
+    if (role === 'admin' && deviceTokens && deviceTokens.length > 0) {
       const notificationData = {
         title: "New Lead Created",
         body: `A new lead for ${companyname} has been posted.`,
@@ -58,7 +60,7 @@ const createLead = asyncHandler(async (req, res) => {
 
       // Send notification and capture response
       notificationResponse = await sendNotification(notificationData);
-    } else {
+    } else if (role === 'admin') {
       console.log("No device tokens found for the user.");
     }
 
