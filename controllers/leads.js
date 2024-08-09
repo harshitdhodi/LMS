@@ -17,12 +17,40 @@ const createLead = asyncHandler(async (req, res) => {
       return res.status(403).json({ msg: "You do not have permission to create a lead." });
     }
 
-    const { firstname, lastname, email, mobile, companyname, leadInfo, status, leadsDetails } = req.body;
+    const { firstname, lastname, email, mobile, companyname, leadInfo, leadsDetails } = req.body;
     const { id } = req.query; // User ID
 
     const leadType = role === 'user' ? 'Genuine' : null;
 
-    // Create and save the new lead
+    let notificationResponse = null; // Variable to store the notification response
+
+    // Send notification only if the role is admin
+    if (role === 'admin') {
+      // Retrieve user and their device tokens
+      const user = await User.findById(id).select('deviceTokens'); // Adjust to include deviceTokens field
+      if (!user) {
+        return res.status(404).json({ msg: "User not found." });
+      }
+
+      const deviceTokens = user.deviceTokens;
+      console.log('Device Tokens:', deviceTokens);
+
+      // Send notification if device tokens are available
+      if (deviceTokens && deviceTokens.length > 0) {
+        const notificationData = {
+          title: "New Lead Created",
+          body: `A new lead for ${companyname} has been posted.`,
+          token: deviceTokens[0], // Single device token
+        };
+      
+        // Send notification and capture response
+        notificationResponse = await sendNotification(notificationData);
+      } else {
+        console.log("No device tokens found for the user.");
+      }
+    }
+    
+    // Create and save the new lead after sending notification
     const newLead = new Leads({
       firstname,
       lastname,
@@ -33,44 +61,20 @@ const createLead = asyncHandler(async (req, res) => {
       user: id,
       byLead: role,
       leadType,
-      status,
       leadsDetails
     });
 
     const savedLead = await newLead.save();
 
-    // Retrieve user and their device tokens
-    const user = await User.findById(id).select('deviceTokens'); // Adjust to include deviceTokens field
-    if (!user) {
-      return res.status(404).json({ msg: "User not found." });
-    }
-
-    const deviceTokens = user.deviceTokens;
-    console.log('Device Tokens:', deviceTokens);
-
-    let notificationResponse = null; // Variable to store the notification response
-
-    // Send notification only if the role is admin
-    if (role === 'admin' && deviceTokens && deviceTokens.length > 0) {
-      const notificationData = {
-        title: "New Lead Created",
-        body: `A new lead for ${companyname} has been posted.`,
-        tokens: deviceTokens // Send notification to all tokens
-      };
-
-      // Send notification and capture response
-      notificationResponse = await sendNotification(notificationData);
-    } else if (role === 'admin') {
-      console.log("No device tokens found for the user.");
-    }
-
     // Respond with the saved lead and notification data
     res.status(200).json({ savedLead, notificationResponse });
+
   } catch (error) {
     console.error("Error creating lead:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
+
 
 
 
