@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const Notification = require("../models/notification")
+const Leads = require("../models/lead")
 const getNotification = asyncHandler(async (req, res) => {
     try {
       const { id } = req.user;
@@ -36,5 +37,51 @@ const getNotification = asyncHandler(async (req, res) => {
     }
   });
   
+  const updateIsExcept = async (req, res) => {
+    try {
+      const { id } = req.query; // User ID from query parameter
+  
+      // Find the notification by user ID
+      const notifications = await Notification.find(id);
+      if (!notifications.length) {
+        return res.status(404).json({ msg: "No notifications found for the user." });
+      }
+  
+      // Process each notification
+      for (const notification of notifications) {
+        // Update isExcept status
+        notification.isExcept = true; // Set to true if that is your requirement
+        await notification.save();
+  
+        // If isExcept is true, save data to Leads schema
+        if (notification.isExcept) {
+          const newLead = new Leads({
+            firstname: notification.firstname,
+            lastname: notification.lastname,
+            email: notification.email,
+            mobile: notification.mobile,
+            companyname: notification.companyname,
+            user: notification.user,
+            leadInfo: notification.leadInfo,
+            leadsDetails: notification.leadsDetails,
+            byLead: notification.byLead,
+            leadType: notification.leadType,
+          });
+  
+          await newLead.save();
+  
+          // Optionally, you can delete the notification entry if it's no longer needed
+          // await Notification.findByIdAndDelete(notification._id);
+        }
+      }
+  
+      res.status(200).json({ msg: "Status updated and data moved to Leads schema." });
+  
+    } catch (error) {
+      console.error("Error updating isExcept status:", error);
+      res.status(500).json({ msg: "Server error", error: error.message });
+    }
+  };
+  
 
-  module.exports = {getNotification}
+  module.exports = {getNotification , updateIsExcept}
