@@ -51,7 +51,7 @@ const  NotificationleadSchema = new mongoose.Schema({
     },
     isExcept:{
         type:Boolean,
-        default:false
+        default:null
     }
 });
 
