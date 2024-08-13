@@ -14,12 +14,12 @@ const  NotificationleadSchema = new mongoose.Schema({
     email:{
         type:String,
         required:true,
-        unique:true,
+      
     },
     mobile:{
         type:String,
         required:true,
-        unique:true,
+      
     },
     status: {
         type: String,
@@ -48,6 +48,10 @@ const  NotificationleadSchema = new mongoose.Schema({
     leadsDetails :{
         type:String,
         required:true,
+    },
+    isExcept:{
+        type:Boolean,
+        default:false
     }
 });
 
