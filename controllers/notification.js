@@ -37,9 +37,17 @@ const getNotification = asyncHandler(async (req, res) => {
     }
   });
   
-   const updateIsExcept = async (req, res) => {
+ const updateIsExcept = async (req, res) => {
     try {
-      const { id } = req.query; // Notification ID from query parameter
+      const { id, isExcept } = req.query; // Notification ID and isExcept value from query parameters
+  
+      // Validate isExcept value
+      if (isExcept !== 'true' && isExcept !== 'false') {
+        return res.status(400).json({ msg: "Invalid isExcept value. It should be 'true' or 'false'." });
+      }
+  
+      // Convert isExcept to boolean
+      const isExceptBool = isExcept === 'true';
   
       // Find the notification by ID
       const notification = await Notification.findById(id);
@@ -48,7 +56,7 @@ const getNotification = asyncHandler(async (req, res) => {
       }
   
       // Update isExcept status
-      notification.isExcept = true; // Set to true if that is your requirement
+      notification.isExcept = isExceptBool;
       await notification.save();
   
       // If isExcept is true, save data to Leads schema
@@ -72,7 +80,7 @@ const getNotification = asyncHandler(async (req, res) => {
         // await Notification.findByIdAndDelete(id);
       }
   
-      res.status(200).json({ msg: "Status updated and data moved to Leads schema." });
+      res.status(200).json({ msg: "Status updated and data moved to Leads schema if applicable." });
   
     } catch (error) {
       console.error("Error updating isExcept status:", error);
