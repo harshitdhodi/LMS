@@ -174,51 +174,50 @@ const createUser = asyncHandler(async (req, res) => {
   });
 
   // Update status fields
+ const path = require("path")
+  // Update status fields
   const updateUserFields = asyncHandler(async (req, res) => {
-    const { id } = req.user;
-    const updates = req.body;
+    const { id } = req.user;  // Extract the user ID from req.user
+    const updateFields = {};  // Initialize an object to hold fields to be updated
+    const updatedFields = {}; // Initialize an object to hold fields that were updated
   
     try {
-      uploadPhoto(req, res, async (err) => {
-       
-        const { role } = req.user;
-        if (role !== 'admin' && role !== 'user') {
-          return res.status(403).json({ msg: "Permission denied. Unauthorized role." });
+      // Handle file uploads if req.file is defined
+      if (req.file) {
+        updateFields.photo = path.basename(req.file.path); // Store the filename of the uploaded photo
+        updatedFields.photo = updateFields.photo; // Include the updated photo field in the response
+      }
+  
+      // Update other fields from req.body
+      for (const key in req.body) {
+        if (key !== 'photo') { // Exclude the photo field if it's being handled separately
+          updateFields[key] = req.body[key]; // Add the field to be updated
+          updatedFields[key] = req.body[key]; // Include the field in the response
         }
+      }
   
-        const user = await User.findById(id);
-        if (!user) {
-          return res.status(404).json({ msg: "User not found" });
-        }
+      // Add updatedAt field
+      updateFields.updatedAt = Date.now(); // Record the current time as the update time
+      updatedFields.updatedAt = updateFields.updatedAt; // Include the updatedAt field in the response
   
-        for (const key in updates) {
-          if (updates.hasOwnProperty(key) && user[key] !== undefined) {
-            user[key] = updates[key];
-          }
-        }
+      // Check if the user exists before updating
+      const existingUser = await User.findById(id); // Fetch the user from the database
+      if (!existingUser) {
+        return res.status(404).json({ message: 'User not found' }); // Return 404 if the user doesn't exist
+      }
   
-        if (req.file) {
-          user.photo = req.file.filename;
-        }
+      // Update User data in the database
+      const updatedUser = await User.findByIdAndUpdate(id, updateFields, { new: true, runValidators: true });
   
-        await user.save();
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'User not found after update attempt' }); // Return 404 if the update failed
+      }
   
-        const updatedFields = {};
-        for (const key in updates) {
-          if (updates.hasOwnProperty(key)) {
-            updatedFields[key] = user[key];
-          }
-        }
-  
-        if (req.file) {
-          updatedFields.photo = user.photo;
-        }
-  
-        res.status(200).json(updatedFields);
-      });
+      // Respond with updated fields only
+      res.status(200).json({ id: updatedUser._id, updatedFields });
     } catch (error) {
       console.error("Error updating user:", error);
-      res.status(500).json({ msg: "Server error", error: error.message });
+      res.status(500).json({ message: 'Server error', error: error.message });
     }
   });
 
