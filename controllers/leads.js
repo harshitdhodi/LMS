@@ -50,7 +50,7 @@ const createLead = asyncHandler(async (req, res) => {
       }
 
       // Save lead data to Notification schema if isExcept is not provided
-      if (isExcept === undefined || isExcept === false) {
+      if (isExcept === undefined || isExcept === null) {
         const newNotificationLead = new Notification({
           firstname,
           lastname,
@@ -62,7 +62,7 @@ const createLead = asyncHandler(async (req, res) => {
           byLead: role,
           leadType: 'Genuine',
           leadsDetails,
-          isExcept: isExcept || false // Default to false if not provided
+          isExcept: isExcept || null // Default to false if not provided
         });
         await newNotificationLead.save();
       } else if (isExcept === true) {
