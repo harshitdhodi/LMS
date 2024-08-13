@@ -8,6 +8,7 @@ const admin = require('firebase-admin');
 const { sendNotification } = require('./sendNotification');
 const Notification = require("../models/notification")
 // Example usage in a route
+
 const createLead = asyncHandler(async (req, res) => {
   try {
     const { role } = req.user;
@@ -17,12 +18,11 @@ const createLead = asyncHandler(async (req, res) => {
       return res.status(403).json({ msg: "You do not have permission to create a lead." });
     }
 
-    const { firstname, lastname, email, mobile, companyname, leadInfo, leadsDetails } = req.body;
+    const { firstname, lastname, email, mobile, companyname, leadInfo, leadsDetails, isExcept } = req.body;
     const { id } = req.query; // User ID
 
-    const leadType = role === 'user' ? 'Genuine' : null;
-
     let notificationResponse = null; // Variable to store the notification response
+    let savedLead = null; // Variable to store saved lead if applicable
 
     // Send notification only if the role is admin
     if (role === 'admin') {
@@ -48,23 +48,55 @@ const createLead = asyncHandler(async (req, res) => {
       } else {
         console.log("No device tokens found for the user.");
       }
-    }
-    
-    // Create and save the new lead after sending notification
-    const newLead = new Leads({
-      firstname,
-      lastname,
-      email,
-      mobile,
-      companyname,
-      leadInfo,
-      user: id,
-      byLead: role,
-      leadType,
-      leadsDetails
-    });
 
-    const savedLead = await newLead.save();
+      // Save lead data to Notification schema if isExcept is not provided
+      if (isExcept === undefined || isExcept === false) {
+        const newNotificationLead = new Notification({
+          firstname,
+          lastname,
+          email,
+          mobile,
+          companyname,
+          leadInfo,
+          user: id,
+          byLead: role,
+          leadType: 'Genuine',
+          leadsDetails,
+          isExcept: isExcept || false // Default to false if not provided
+        });
+        await newNotificationLead.save();
+      } else if (isExcept === true) {
+        // Save lead data to Leads schema if isExcept is true
+        const newLead = new Leads({
+          firstname,
+          lastname,
+          email,
+          mobile,
+          companyname,
+          leadInfo,
+          user: id,
+          byLead: role,
+          leadType: 'Genuine',
+          leadsDetails
+        });
+        savedLead = await newLead.save();
+      }
+    } else if (role === 'user') {
+      // Directly save lead data if the role is user
+      const newLead = new Leads({
+        firstname,
+        lastname,
+        email,
+        mobile,
+        companyname,
+        leadInfo,
+        user: id,
+        byLead: role,
+        leadType: 'Genuine',
+        leadsDetails
+      });
+      savedLead = await newLead.save();
+    }
 
     // Respond with the saved lead and notification data
     res.status(200).json({ savedLead, notificationResponse });
@@ -77,6 +109,7 @@ const createLead = asyncHandler(async (req, res) => {
 
 
 
+ 
 
   const updateLead = asyncHandler(async (req, res) => {
     const { id } = req.query; // Assuming the lead ID is passed as a URL parameter
@@ -426,6 +459,9 @@ const getLeadByLeadtype = asyncHandler(async (req, res) => {
     res.status(500).json({ msg: 'Server error', error: error.message });
   }
 });
+ 
+
+
 
 
   module.exports ={createLead , updateLead,getLeadsByApiKey,createLeads ,getLeadByLeadtype , getAllLeads, deleteLeads ,filterLeadsByInvalidLeadType, filterLeadsByleadType , getLeadById, filterLeadsByStatus, getCounts , getLeadByObjectId};
