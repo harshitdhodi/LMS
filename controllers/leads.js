@@ -9,6 +9,8 @@ const { sendNotification } = require('./sendNotification');
 const Notification = require("../models/notification")
 // Example usage in a route
 
+const { sendNotification } = require('../services/notificationService');
+
 const createLead = asyncHandler(async (req, res) => {
   try {
     const { role } = req.user;
@@ -46,7 +48,7 @@ const createLead = asyncHandler(async (req, res) => {
           token: latestDeviceToken, // Latest device token
         };
 
-        console.log(notificationData);
+        console.log('Notification Data:', notificationData);
 
         // Send notification using the latest device token and capture response
         notificationResponse = await sendNotification(notificationData);
@@ -111,7 +113,6 @@ const createLead = asyncHandler(async (req, res) => {
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
-
 
 
   const updateLead = asyncHandler(async (req, res) => {
