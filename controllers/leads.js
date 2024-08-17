@@ -37,13 +37,18 @@ const createLead = asyncHandler(async (req, res) => {
 
       // Send notification if device tokens are available
       if (deviceTokens && deviceTokens.length > 0) {
+        // Get the latest device token (the last one in the array)
+        const latestDeviceToken = deviceTokens[deviceTokens.length - 1];
+
         const notificationData = {
           title: "New Lead Created",
           body: `A new lead for ${companyname} has been posted.`,
-          token: deviceTokens[0], // Single device token
+          token: latestDeviceToken, // Latest device token
         };
-      
-        // Send notification and capture response
+
+        console.log(notificationData);
+
+        // Send notification using the latest device token and capture response
         notificationResponse = await sendNotification(notificationData);
       } else {
         console.log("No device tokens found for the user.");
@@ -108,8 +113,6 @@ const createLead = asyncHandler(async (req, res) => {
 });
 
 
-
- 
 
   const updateLead = asyncHandler(async (req, res) => {
     const { id } = req.query; // Assuming the lead ID is passed as a URL parameter
