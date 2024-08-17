@@ -11,7 +11,8 @@ const image = require("./route/image")
 const count = require("./route/count")
 const contact = require("./route/message_route")
 const notification = require("./route/notification")
-const cors = require("cors")
+const path = require("path");
+// const cors = require("cors")
 const cookieParser = require("cookie-parser");
 // const { notFound, errorHandler } = require('./middleware/errorHandler');
 const app = express();
@@ -22,12 +23,13 @@ const PORT= process.env.PORT || 4000;
 
 
 
-app.use(cors({
-  origin: 'http://localhost:5173', // Replace with your front-end origin
-  credentials: true // This allows cookies to be sent along with requests
-}));
+// app.use(cors({
+//   origin: 'http://localhost:5173', // Replace with your front-end origin
+//   credentials: true // This allows cookies to be sent along with requests
+// }));
 // MongoDB connection
 dbConnect(); 
+app.use(express.static(path.join(__dirname, 'dist')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended:false}))
 app.use(cookieParser()) 
@@ -46,6 +48,16 @@ app.use("/api/notification", notification);
 // app.use("/",(req , res) => {
 //     res.send("Hello Server ")
 // } )
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
+
+// Start server
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
 app.listen(PORT , () => {
     console.log(`Server Running at PORT ${PORT} `)
 })
