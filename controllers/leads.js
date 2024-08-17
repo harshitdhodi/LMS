@@ -9,7 +9,6 @@ const { sendNotification } = require('./sendNotification');
 const Notification = require("../models/notification")
 // Example usage in a route
 
-const { sendNotification } = require('../services/notificationService');
 
 const createLead = asyncHandler(async (req, res) => {
   try {
