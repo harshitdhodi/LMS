@@ -10,69 +10,80 @@ const Notification = require("../models/notification")
 // Example usage in a route
 
 
-const createLead = asyncHandler(async (req, res) => {
-  try {
-    const { role } = req.user;
+  const createLead = asyncHandler(async (req, res) => {
+    try {
+      const { role } = req.user;
 
-    // Check if the role is allowed
-    if (role !== 'admin' && role !== 'user') {
-      return res.status(403).json({ msg: "You do not have permission to create a lead." });
-    }
-
-    const { firstname, lastname, email, mobile, companyname, leadInfo, leadsDetails, isExcept } = req.body;
-    const { id } = req.query; // User ID
-
-    let notificationResponse = null; // Variable to store the notification response
-    let savedLead = null; // Variable to store saved lead if applicable
-
-    // Send notification only if the role is admin
-    if (role === 'admin') {
-      // Retrieve user and their device tokens
-      const user = await User.findById(id).select('deviceTokens'); // Adjust to include deviceTokens field
-      if (!user) {
-        return res.status(404).json({ msg: "User not found." });
+      // Check if the role is allowed
+      if (role !== 'admin' && role !== 'user') {
+        return res.status(403).json({ msg: "You do not have permission to create a lead." });
       }
 
-      const deviceTokens = user.deviceTokens;
-      console.log('Device Tokens:', deviceTokens);
+      const { firstname, lastname, email, mobile, companyname, leadInfo, leadsDetails, isExcept } = req.body;
+      const { id } = req.query; // User ID
 
-      // Send notification if device tokens are available
-      if (deviceTokens && deviceTokens.length > 0) {
-        // Get the latest device token (the last one in the array)
-        const latestDeviceToken = deviceTokens[deviceTokens.length - 1];
+      let notificationResponse = null; // Variable to store the notification response
+      let savedLead = null; // Variable to store saved lead if applicable
 
-        const notificationData = {
-          title: "New Lead Created",
-          body: `A new lead for ${companyname} has been posted.`,
-          token: latestDeviceToken, // Latest device token
-        };
+      // Send notification only if the role is admin
+      if (role === 'admin') {
+        // Retrieve user and their device tokens
+        const user = await User.findById(id).select('deviceTokens'); // Adjust to include deviceTokens field
+        if (!user) {
+          return res.status(404).json({ msg: "User not found." });
+        }
 
-        console.log('Notification Data:', notificationData);
+        const deviceTokens = user.deviceTokens;
+        console.log('Device Tokens:', deviceTokens);
 
-        // Send notification using the latest device token and capture response
-        notificationResponse = await sendNotification(notificationData);
-      } else {
-        console.log("No device tokens found for the user.");
-      }
+        // Send notification if device tokens are available
+        if (deviceTokens && deviceTokens.length > 0) {
+          const notificationData = {
+            title: "New Lead Created",
+            body: `A new lead for ${companyname} has been posted.`,
+            token: deviceTokens[0], // Single device token
+          };
+        console.log(notificationData)
+          // Send notification and capture response
+          notificationResponse = await sendNotification(notificationData);
+        } else {
+          console.log("No device tokens found for the user.");
+        }
 
-      // Save lead data to Notification schema if isExcept is not provided
-      if (isExcept === undefined || isExcept === null) {
-        const newNotificationLead = new Notification({
-          firstname,
-          lastname,
-          email,
-          mobile,
-          companyname,
-          leadInfo,
-          user: id,
-          byLead: role,
-          leadType: 'Genuine',
-          leadsDetails,
-          isExcept: isExcept || null // Default to false if not provided
-        });
-        await newNotificationLead.save();
-      } else if (isExcept === true) {
-        // Save lead data to Leads schema if isExcept is true
+        // Save lead data to Notification schema if isExcept is not provided
+        if (isExcept === undefined || isExcept === null) {
+          const newNotificationLead = new Notification({
+            firstname,
+            lastname,
+            email,
+            mobile,
+            companyname,
+            leadInfo,
+            user: id,
+            byLead: role,
+            leadType: 'Genuine',
+            leadsDetails,
+            isExcept: isExcept || null // Default to false if not provided
+          });
+          await newNotificationLead.save();
+        } else if (isExcept === true) {
+          // Save lead data to Leads schema if isExcept is true
+          const newLead = new Leads({
+            firstname,
+            lastname,
+            email,
+            mobile,
+            companyname,
+            leadInfo,
+            user: id,
+            byLead: role,
+            leadType: 'Genuine',
+            leadsDetails
+          });
+          savedLead = await newLead.save();
+        }
+      } else if (role === 'user') {
+        // Directly save lead data if the role is user
         const newLead = new Leads({
           firstname,
           lastname,
@@ -87,32 +98,15 @@ const createLead = asyncHandler(async (req, res) => {
         });
         savedLead = await newLead.save();
       }
-    } else if (role === 'user') {
-      // Directly save lead data if the role is user
-      const newLead = new Leads({
-        firstname,
-        lastname,
-        email,
-        mobile,
-        companyname,
-        leadInfo,
-        user: id,
-        byLead: role,
-        leadType: 'Genuine',
-        leadsDetails
-      });
-      savedLead = await newLead.save();
+
+      // Respond with the saved lead and notification data
+      res.status(200).json({ savedLead, notificationResponse });
+
+    } catch (error) {
+      console.error("Error creating lead:", error);
+      res.status(500).json({ msg: "Server error", error: error.message });
     }
-
-    // Respond with the saved lead and notification data
-    res.status(200).json({ savedLead, notificationResponse });
-
-  } catch (error) {
-    console.error("Error creating lead:", error);
-    res.status(500).json({ msg: "Server error", error: error.message });
-  }
-});
-
+  });
 
   const updateLead = asyncHandler(async (req, res) => {
     const { id } = req.query; // Assuming the lead ID is passed as a URL parameter
