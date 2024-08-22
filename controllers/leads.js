@@ -9,82 +9,55 @@ const { sendNotification } = require('./sendNotification');
 const Notification = require("../models/notification")
 // Example usage in a route
 
+const createLead = asyncHandler(async (req, res) => {
+  try {
+    const { role } = req.user;
 
-  const createLead = asyncHandler(async (req, res) => {
-    try {
-      const { role } = req.user;
+    // Check if the role is allowed
+    if (role !== 'admin' && role !== 'user') {
+      return res.status(403).json({ msg: "You do not have permission to create a lead." });
+    }
 
-      // Check if the role is allowed
-      if (role !== 'admin' && role !== 'user') {
-        return res.status(403).json({ msg: "You do not have permission to create a lead." });
+    const { firstname, lastname, email, mobile, companyname, leadInfo, leadsDetails, isExcept } = req.body;
+    const { id } = req.query; // User ID
+
+    let notificationResponse = null; // Variable to store the notification response
+    let savedLead = null; // Variable to store saved lead
+    let newNotificationLead = null; // Variable to store new notification lead if applicable
+
+    // Process for 'admin' role
+    if (role === 'admin') {
+      // Retrieve user and their device tokens
+      const user = await User.findById(id).select('deviceTokens');
+      if (!user) {
+        return res.status(404).json({ msg: "User not found." });
       }
 
-      const { firstname, lastname, email, mobile, companyname, leadInfo, leadsDetails, isExcept } = req.body;
-      const { id } = req.query; // User ID
+      const deviceTokens = user.deviceTokens;
+      console.log('Device Tokens:', deviceTokens);
 
-      let notificationResponse = null; // Variable to store the notification response
-      let savedLead = null; // Variable to store saved lead if applicable
+      // Send notification if device tokens are available
+      if (deviceTokens && deviceTokens.length > 0) {
+        const notificationData = {
+          title: "New Lead Created",
+          body: `A new lead for ${companyname} has been posted.`,
+          token: deviceTokens[0], // Single device token
+        };
+        console.log('Notification Data:', notificationData);
 
-      // Send notification only if the role is admin
-      if (role === 'admin') {
-        // Retrieve user and their device tokens
-        const user = await User.findById(id).select('deviceTokens'); // Adjust to include deviceTokens field
-        if (!user) {
-          return res.status(404).json({ msg: "User not found." });
-        }
-
-        const deviceTokens = user.deviceTokens;
-        console.log('Device Tokens:', deviceTokens);
-
-        // Send notification if device tokens are available
-        if (deviceTokens && deviceTokens.length > 0) {
-          const notificationData = {
-            title: "New Lead Created",
-            body: `A new lead for ${companyname} has been posted.`,
-            token: deviceTokens[0], // Single device token
-          };
-        console.log(notificationData)
-          // Send notification and capture response
+        try {
           notificationResponse = await sendNotification(notificationData);
-        } else {
-          console.log("No device tokens found for the user.");
+          console.log('Notification Response:', notificationResponse);
+        } catch (notificationError) {
+          console.error('Error in sending notification:', notificationError);
         }
+      } else {
+        console.log("No device tokens found for the user.");
+      }
 
-        // Save lead data to Notification schema if isExcept is not provided
-        if (isExcept === undefined || isExcept === null) {
-          const newNotificationLead = new Notification({
-            firstname,
-            lastname,
-            email,
-            mobile,
-            companyname,
-            leadInfo,
-            user: id,
-            byLead: role,
-            leadType: 'Genuine',
-            leadsDetails,
-            isExcept: isExcept || null // Default to false if not provided
-          });
-          await newNotificationLead.save();
-        } else if (isExcept === true) {
-          // Save lead data to Leads schema if isExcept is true
-          const newLead = new Leads({
-            firstname,
-            lastname,
-            email,
-            mobile,
-            companyname,
-            leadInfo,
-            user: id,
-            byLead: role,
-            leadType: 'Genuine',
-            leadsDetails
-          });
-          savedLead = await newLead.save();
-        }
-      } else if (role === 'user') {
-        // Directly save lead data if the role is user
-        const newLead = new Leads({
+      // Save lead data to both Notification and Leads schemas
+      if (isExcept === undefined || isExcept === null) {
+        newNotificationLead = new Notification({
           firstname,
           lastname,
           email,
@@ -94,19 +67,53 @@ const Notification = require("../models/notification")
           user: id,
           byLead: role,
           leadType: 'Genuine',
-          leadsDetails
+          leadsDetails,
+          isExcept: isExcept || null // Default to null if not provided
         });
-        savedLead = await newLead.save();
+        console.log('New Notification Lead:', newNotificationLead);
+        await newNotificationLead.save();
       }
 
-      // Respond with the saved lead and notification data
-      res.status(200).json({ savedLead, notificationResponse });
+      const newLead = new Leads({
+        firstname,
+        lastname,
+        email,
+        mobile,
+        companyname,
+        leadInfo,
+        user: id,
+        byLead: role,
+        leadType: 'Genuine',
+        leadsDetails
+      });
+      savedLead = await newLead.save();
 
-    } catch (error) {
-      console.error("Error creating lead:", error);
-      res.status(500).json({ msg: "Server error", error: error.message });
+    } else if (role === 'user') {
+      // Directly save lead data if the role is user
+      const newLead = new Leads({
+        firstname,
+        lastname,
+        email,
+        mobile,
+        companyname,
+        leadInfo,
+        user: id,
+        byLead: role,
+        leadType: 'Genuine',
+        leadsDetails
+      });
+      savedLead = await newLead.save();
     }
-  });
+
+    // Respond with the saved lead and notification data
+    res.status(200).json({ newNotificationLead, savedLead, notificationResponse });
+
+  } catch (error) {
+    console.error("Error creating lead:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
+  }
+});
+
 
   const updateLead = asyncHandler(async (req, res) => {
     const { id } = req.query; // Assuming the lead ID is passed as a URL parameter
@@ -457,8 +464,46 @@ const getLeadByLeadtype = asyncHandler(async (req, res) => {
   }
 });
  
+const filterUserLeadsByStatus = async (req, res) => {
+  const { status, user } = req.query;
+
+  try {
+    // Fetch all valid statuses from the database
+    const validStatuses = await StatusType.find().distinct('status_type');
+
+    // Ensure status is valid
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status'
+      });
+    }
+
+    // Ensure userId is provided
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    // Filter leads by status and userId
+    const filteredLeads = await Leads.find({ status,user });
+    
+    res.status(200).json({
+      success: true,
+      data: filteredLeads
+    });
+  } catch (error) {
+    console.error('Error filtering leads by status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error filtering leads'
+    });
+  }
+};
 
 
 
 
-  module.exports ={createLead , updateLead,getLeadsByApiKey,createLeads ,getLeadByLeadtype , getAllLeads, deleteLeads ,filterLeadsByInvalidLeadType, filterLeadsByleadType , getLeadById, filterLeadsByStatus, getCounts , getLeadByObjectId};
+  module.exports ={createLead ,filterUserLeadsByStatus, updateLead,getLeadsByApiKey,createLeads ,getLeadByLeadtype , getAllLeads, deleteLeads ,filterLeadsByInvalidLeadType, filterLeadsByleadType , getLeadById, filterLeadsByStatus, getCounts , getLeadByObjectId};
