@@ -11,6 +11,7 @@ const image = require("./route/image")
 const count = require("./route/count")
 const contact = require("./route/message_route")
 const notification = require("./route/notification")
+const contactform = require("./route/contactForm")
 const path = require("path");
 // const cors = require("cors")
 const cookieParser = require("cookie-parser");
@@ -43,6 +44,7 @@ app.use("/api/count" , count)
 app.use("/api/image", image); 
 app.use("/api/contact", contact); 
 app.use("/api/notification", notification); 
+app.use("/api/contactform" , contactform)
   // Use error handler
 //   app.use(errorHandler);
 // app.use("/",(req , res) => {
