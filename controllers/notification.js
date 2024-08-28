@@ -19,7 +19,7 @@ const getNotification = asyncHandler(async (req, res) => {
       // Update the status field for these notifications
       const updateResult = await Notification.updateMany(
         { user: id },
-        { $set: { status: 'old' } } // Update only the status field
+        { $set: { status: 'New' } } // Update only the status field
       );
   
       // Check if the update was successful
