@@ -22,13 +22,13 @@ const createLead = asyncHandler(async (req, res) => {
     const { id } = req.query; // User ID
 
     let notificationResponse = null; // Variable to store the notification response
-    let savedLead = null; // Variable to store saved lead
+    let savedLead = null; // Variable to store saved lead if applicable
     let newNotificationLead = null; // Variable to store new notification lead if applicable
 
-    // Process for 'admin' role
+    // Send notification only if the role is admin
     if (role === 'admin') {
       // Retrieve user and their device tokens
-      const user = await User.findById(id).select('deviceTokens');
+      const user = await User.findById(id).select('deviceTokens'); // Adjust to include deviceTokens field
       if (!user) {
         return res.status(404).json({ msg: "User not found." });
       }
@@ -43,20 +43,15 @@ const createLead = asyncHandler(async (req, res) => {
           body: `A new lead for ${companyname} has been posted.`,
           token: deviceTokens[0], // Single device token
         };
-        console.log('Notification Data:', notificationData);
-
-        try {
-          notificationResponse = await sendNotification(notificationData);
-          console.log('Notification Response:', notificationResponse);
-        } catch (notificationError) {
-          console.error('Error in sending notification:', notificationError);
-        }
+      
+        // Send notification and capture response
+        notificationResponse = await sendNotification(notificationData);
       } else {
         console.log("No device tokens found for the user.");
       }
 
-      // Save lead data to both Notification and Leads schemas
-      if (isExcept === undefined || isExcept === null) {
+      // Save lead data to Notification schema if isExcept is not provided
+      if (isExcept === undefined || isExcept === false) {
         newNotificationLead = new Notification({
           firstname,
           lastname,
@@ -68,26 +63,25 @@ const createLead = asyncHandler(async (req, res) => {
           byLead: role,
           leadType: 'Genuine',
           leadsDetails,
-          isExcept: isExcept || null // Default to null if not provided
+          isExcept: isExcept || false // Default to false if not provided
         });
-        console.log('New Notification Lead:', newNotificationLead);
         await newNotificationLead.save();
+      } else if (isExcept === true) {
+        // Save lead data to Leads schema if isExcept is true
+        const newLead = new Leads({
+          firstname,
+          lastname,
+          email,
+          mobile,
+          companyname,
+          leadInfo,
+          user: id,
+          byLead: role,
+          leadType: 'Genuine',
+          leadsDetails
+        });
+        savedLead = await newLead.save();
       }
-
-      const newLead = new Leads({
-        firstname,
-        lastname,
-        email,
-        mobile,
-        companyname,
-        leadInfo,
-        user: id,
-        byLead: role,
-        leadType: 'Genuine',
-        leadsDetails
-      });
-      savedLead = await newLead.save();
-
     } else if (role === 'user') {
       // Directly save lead data if the role is user
       const newLead = new Leads({
@@ -105,8 +99,14 @@ const createLead = asyncHandler(async (req, res) => {
       savedLead = await newLead.save();
     }
 
-    // Respond with the saved lead and notification data
-    res.status(200).json({ newNotificationLead, savedLead, notificationResponse });
+    // Respond with the appropriate data based on the role
+    if (role === 'admin' && newNotificationLead) {
+      res.status(200).json({ newNotificationLead, notificationResponse });
+    } else if (role === 'user' && savedLead) {
+      res.status(200).json({ savedLead });
+    } else {
+      res.status(200).json({ msg: "Lead created successfully", notificationResponse });
+    }
 
   } catch (error) {
     console.error("Error creating lead:", error);
@@ -114,6 +114,10 @@ const createLead = asyncHandler(async (req, res) => {
   }
 });
 
+
+
+
+ 
 
   const updateLead = asyncHandler(async (req, res) => {
     const { id } = req.query; // Assuming the lead ID is passed as a URL parameter
@@ -464,46 +468,8 @@ const getLeadByLeadtype = asyncHandler(async (req, res) => {
   }
 });
  
-const filterUserLeadsByStatus = async (req, res) => {
-  const { status, user } = req.query;
-
-  try {
-    // Fetch all valid statuses from the database
-    const validStatuses = await StatusType.find().distinct('status_type');
-
-    // Ensure status is valid
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid status'
-      });
-    }
-
-    // Ensure userId is provided
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID is required'
-      });
-    }
-
-    // Filter leads by status and userId
-    const filteredLeads = await Leads.find({ status,user });
-    
-    res.status(200).json({
-      success: true,
-      data: filteredLeads
-    });
-  } catch (error) {
-    console.error('Error filtering leads by status:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error filtering leads'
-    });
-  }
-};
 
 
 
 
-  module.exports ={createLead ,filterUserLeadsByStatus, updateLead,getLeadsByApiKey,createLeads ,getLeadByLeadtype , getAllLeads, deleteLeads ,filterLeadsByInvalidLeadType, filterLeadsByleadType , getLeadById, filterLeadsByStatus, getCounts , getLeadByObjectId};
+  module.exports ={createLead , updateLead,getLeadsByApiKey,createLeads ,getLeadByLeadtype , getAllLeads, deleteLeads ,filterLeadsByInvalidLeadType, filterLeadsByleadType , getLeadById, filterLeadsByStatus, getCounts , getLeadByObjectId};
