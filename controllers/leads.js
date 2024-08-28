@@ -468,8 +468,45 @@ const getLeadByLeadtype = asyncHandler(async (req, res) => {
   }
 });
  
+const filterUserLeadsByStatus = async (req, res) => {
+  const { status, user } = req.query;
+
+  try {
+    // Fetch all valid statuses from the database
+    const validStatuses = await StatusType.find().distinct('status_type');
+
+    // Ensure status is valid
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status'
+      });
+    }
+
+    // Ensure userId is provided
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    // Filter leads by status and userId
+    const filteredLeads = await Leads.find({ status,user });
+    
+    res.status(200).json({
+      success: true,
+      data: filteredLeads
+    });
+  } catch (error) {
+    console.error('Error filtering leads by status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error filtering leads'
+    });
+  }
+};
 
 
 
-
-  module.exports ={createLead , updateLead,getLeadsByApiKey,createLeads ,getLeadByLeadtype , getAllLeads, deleteLeads ,filterLeadsByInvalidLeadType, filterLeadsByleadType , getLeadById, filterLeadsByStatus, getCounts , getLeadByObjectId};
+  module.exports ={createLead ,filterUserLeadsByStatus, updateLead,getLeadsByApiKey,createLeads ,getLeadByLeadtype , getAllLeads, deleteLeads ,filterLeadsByInvalidLeadType, filterLeadsByleadType , getLeadById, filterLeadsByStatus, getCounts , getLeadByObjectId};
