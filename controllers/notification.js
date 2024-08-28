@@ -39,10 +39,14 @@ const getNotification = asyncHandler(async (req, res) => {
   
   const updateIsExcept = async (req, res) => {
     try {
-      const { id } = req.query; // User ID from query parameter
+      const { id, isExcept } = req.query; // User ID and isExcept value from query parameter
   
       if (!id) {
         return res.status(400).json({ msg: "User ID is required." });
+      }
+  
+      if (isExcept === undefined) {
+        return res.status(400).json({ msg: "isExcept value is required." });
       }
   
       // Find the notification by ID
@@ -53,41 +57,47 @@ const getNotification = asyncHandler(async (req, res) => {
       }
   
       // Update isExcept status
-      notification.isExcept = true; // Set to true if that is your requirement
+      notification.isExcept = isExcept === "true"; // Convert string to boolean
       await notification.save();
   
-      // If isExcept is true, save data to Leads schema
       if (notification.isExcept) {
-        // Create a new Lead with the fields from the notification
+        // If isExcept is true, save data to Leads schema
         const newLead = new Leads({
-          firstname: notification.firstname || "", // Default to an empty string if not present
-          lastname: notification.lastname || "", // Default to an empty string if not present
-          email: notification.email || "", // Default to an empty string if not present
-          mobile: notification.mobile || "", // Default to an empty string if not present
-          companyname: notification.companyname || "", // Default to an empty string if not present
+          firstname: notification.firstname || "", 
+          lastname: notification.lastname || "", 
+          email: notification.email || "", 
+          mobile: notification.mobile || "", 
+          companyname: notification.companyname || "", 
           user: notification.user,
-          leadInfo: notification.leadInfo || "", // Default to an empty string if not present
-          leadsDetails: notification.leadsDetails || "", // Default to an empty string if not present
-          byLead: notification.byLead || "admin", // Default to 'admin' if not present
-          leadType: notification.leadType || "", // Default to an empty string if not present
-          status: notification.status || "New", // Default to "New" if not provided
-          name: notification.name || "", // Default to an empty string if not present
-          subject: notification.subject || "", // Default to an empty string if not present
-          phone: notification.phone || "", // Default to an empty string if not present
-          message: notification.message || "", // Default to an empty string if not present
-          API_KEY: notification.API_KEY || "", // Default to an empty string if not present
+          leadInfo: notification.leadInfo || "", 
+          leadsDetails: notification.leadsDetails || "", 
+          byLead: notification.byLead || "admin", 
+          leadType: notification.leadType || "", 
+          status: notification.status || "New", 
+          name: notification.name || "", 
+          subject: notification.subject || "", 
+          phone: notification.phone || "", 
+          message: notification.message || "", 
+          API_KEY: notification.API_KEY || "", 
         });
   
         await newLead.save();
+  
+        // Optionally, delete the notification after moving it to Leads
+        await Notification.findByIdAndDelete(id);
+      } else {
+        // If isExcept is false, delete the notification
+        await Notification.findByIdAndDelete(id);
       }
   
-      res.status(200).json({ msg: "Status updated and data moved to Leads schema." });
+      res.status(200).json({ msg: notification.isExcept ? "Status updated and data moved to Leads schema." : "Notification deleted." });
   
     } catch (error) {
       console.error("Error updating isExcept status:", error);
       res.status(500).json({ msg: "Server error", error: error.message });
     }
   };
+  
   
   
 
