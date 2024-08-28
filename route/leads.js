@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const {createLead , updateLead,getLeadsByApiKey,getLeadByLeadtype, createLeads ,deleteLeads, getAllLeads,filterLeadsByleadType,filterLeadsByInvalidLeadType, getCounts , getLeadById, filterLeadsByStatus , getLeadByObjectId} = require("../controllers/leads")
+const {createLead , updateLead,getLeadsByApiKey,getLeadByLeadtype,filterUserLeadsByStatus, createLeads ,deleteLeads, getAllLeads,filterLeadsByleadType,filterLeadsByInvalidLeadType, getCounts , getLeadById, filterLeadsByStatus , getLeadByObjectId} = require("../controllers/leads")
 const {checkAdmin} = require("../middleware/checkAdmin");
 const { authMiddleware } = require("../middleware/adminOruser");
 const {extractDeviceToken} = require("../middleware/firebase")
@@ -18,7 +18,7 @@ router.get("/getCounts" , authMiddleware ,getCounts );
 router.delete("/deleteLead" , authMiddleware ,deleteLeads );
 router.get("/getLeadsByApiKey" , authMiddleware ,getLeadsByApiKey );
 router.get("/getLeadByLeadtype" , authMiddleware ,getLeadByLeadtype );
-
+router.get("/filterUserLeadsByStatus" , authMiddleware ,filterUserLeadsByStatus );
 router.get('/test-token', extractDeviceToken, (req, res) => {
     res.status(200).json({
       message: 'Token validation test successful',
