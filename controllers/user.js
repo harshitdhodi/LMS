@@ -72,6 +72,7 @@ const createUser = asyncHandler(async (req, res) => {
 
 
   //login user
+    //login user
   const loginUser = asyncHandler(async (req, res) => {
     const { email, password, deviceTokens } = req.body;
     
@@ -109,6 +110,7 @@ const createUser = asyncHandler(async (req, res) => {
     // Respond with the token
     res.status(200).json({ msg: "Logged in successfully", token, id: user._id });
   });
+  
   
   
   
