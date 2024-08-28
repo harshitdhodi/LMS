@@ -5,20 +5,20 @@ const User = require("../models/user")
 var leadSchema = new mongoose.Schema({
     firstname:{
         type:String,
-        required:true, 
+         
     },
     lastname:{
         type:String,
-        required:true, 
+         
     },
     email:{
         type:String,
-        required:true,
+        
         unique:true,
     },
     mobile:{
         type:String,
-        required:true,
+        
         unique:true,
     },
     status: {
@@ -34,7 +34,7 @@ var leadSchema = new mongoose.Schema({
     },
     companyname:{   
         type:String,
-        required:true,
+        
     },
     user: {
         type: Schema.Types.ObjectId,
@@ -43,12 +43,32 @@ var leadSchema = new mongoose.Schema({
       },
     leadInfo:{
         type:String,
-        required:true,
+        
     },
     leadsDetails :{
         type:String,
-        required:true,
-    }
+        
+    },
+    name: {
+        type: String,
+        default: ""
+      },
+      subject: {
+        type: String,
+        default: ""
+      },
+      phone: {
+        type: String,
+        default: ""
+      },
+      message: {
+        type: String,
+        default: ""
+      },
+      API_KEY: {
+        type: String,
+    
+      },
 });
 
 //Export the model
