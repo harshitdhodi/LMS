@@ -1,120 +1,148 @@
-const Leads = require("../models/lead");
 const asyncHandler = require("express-async-handler");
 const User = require("../models/user")
 const StatusType = require("../models/status")
+const UserStatus = require("../models/userStatus")
 const LeadQuality = require("../models/leadQuality")
 const admin = require('firebase-admin');
 // Load Firebase Admin SDK credentials
 const { sendNotification } = require('./sendNotification');
 const Notification = require("../models/notification")
 // Example usage in a route
+const sendEmailNotification = require("../utils.js/adminMail")
 
 const createLead = asyncHandler(async (req, res) => {
   try {
-    const { role } = req.user;
+    const { role } = req.user; // Extract role from the request object
+    const { id } = req.query;
+    const { firstname, lastname, email, mobile, companyname, leadInfo, leadsDetails, isExcept } = req.body;
 
     // Check if the role is allowed
-    if (role !== 'admin' && role !== 'user') {
+    if (role !== 'admin' && role !== 'user' && role !== 'Manager') {
       return res.status(403).json({ msg: "You do not have permission to create a lead." });
     }
 
-    const { firstname, lastname, email, mobile, companyname, leadInfo, leadsDetails, isExcept } = req.body;
-    const { id } = req.query; // User ID
+    // Retrieve customer/user from User schema
+    let customer = await User.findById(id).select('deviceTokens');
+    let manager = null; // Initialize manager variable
 
-    let notificationResponse = null; // Variable to store the notification response
-    let savedLead = null; // Variable to store saved lead if applicable
-    let newNotificationLead = null; // Variable to store new notification lead if applicable
-
-    // Send notification only if the role is admin
-    if (role === 'admin') {
-      // Retrieve user and their device tokens
-      const user = await User.findById(id).select('deviceTokens'); // Adjust to include deviceTokens field
-      if (!user) {
-        return res.status(404).json({ msg: "User not found." });
+    // If the ID belongs to a Manager, find the associated user
+    if (!customer) {
+      manager = await Manager.findById(id).select('user deviceTokens'); // Fetch manager with user ID and deviceTokens
+      if (!manager) {
+        return res.status(404).json({ msg: "User or Manager not found." });
       }
 
-      const deviceTokens = user.deviceTokens;
-      console.log('Device Tokens:', deviceTokens);
+      // Fetch the customer/user associated with the manager
+      customer = await User.findById(manager.user).select('deviceTokens');
+      if (!customer) {
+        return res.status(404).json({ msg: "User associated with the Manager not found." });
+      }
+    } else {
+      // If customer is found, check if they have an associated manager
+      manager = await Manager.findOne({ user: customer._id }).select('deviceTokens user'); // Find manager by customer ID
+    }
 
-      // Send notification if device tokens are available
-      if (deviceTokens && deviceTokens.length > 0) {
-        const notificationData = {
+    // Always save lead data to Leads schema
+    const newLead = new Leads({
+      firstname,
+      lastname,
+      email,
+      mobile,
+      companyname,
+      leadInfo,
+      user: customer._id, // Save the user ID found from either User or Manager schema
+      byLead: role,
+      leadType: 'Genuine',
+      leadsDetails
+    });
+
+    const savedLead = await newLead.save();
+
+    // Prepare notifications if the role is admin
+    let notificationResponses = [];
+    if (role === 'admin') {
+      // Send notification to Customer
+      if (customer.deviceTokens && customer.deviceTokens.length > 0) {
+        const customerNotificationData = {
           title: "New Lead Created",
           body: `A new lead for ${companyname} has been posted.`,
-          token: deviceTokens[0], // Single device token
+          token: customer.deviceTokens[0], // Single device token for customer
         };
-      
-        // Send notification and capture response
-        notificationResponse = await sendNotification(notificationData);
-      } else {
-        console.log("No device tokens found for the user.");
-      }
 
-      // Save lead data to Notification schema if isExcept is not provided
-      if (isExcept === undefined || isExcept === false) {
-        newNotificationLead = new Notification({
+        // Send notification and capture response for customer
+        const customerNotificationResponse = await sendNotification(customerNotificationData);
+        notificationResponses.push(customerNotificationResponse);
+
+        // Save customer notification in Notification schema
+        const customerNotification = new Notification({
           firstname,
           lastname,
           email,
           mobile,
           companyname,
           leadInfo,
-          user: id,
-          byLead: role,
-          leadType: 'Genuine',
           leadsDetails,
-          isExcept: isExcept || false // Default to false if not provided
+          isExcept,
+          byLead: role,
+          leadType: 'Genuine',
+          user: customer._id, // Associate with the customer ID
+          status: 'New',
+          API_KEY: '', // Add appropriate API_KEY if needed
+          name: `${firstname} ${lastname}`,
+          subject: "Lead Created",
+          phone: mobile,
+          message: `Lead created for ${companyname}.`,
         });
-        await newNotificationLead.save();
-      } else if (isExcept === true) {
-        // Save lead data to Leads schema if isExcept is true
-        const newLead = new Leads({
+        await customerNotification.save();
+      }
+console.log(manager)
+      // Send notification to Manager if exists
+      if (manager && manager.deviceTokens && manager.deviceTokens.length > 0) {
+        const managerNotificationData = {
+          title: "New Lead Created",
+          body: `A new lead for ${companyname} has been posted for your customer.`,
+          token: manager.deviceTokens[0], // Single device token for manager
+        };
+
+        // Send notification and capture response for manager
+        const managerNotificationResponse = await sendNotification(managerNotificationData);
+        notificationResponses.push(managerNotificationResponse);
+
+        // Save manager notification in Notification schema
+        const managerNotification = new Notification({
           firstname,
           lastname,
           email,
           mobile,
           companyname,
           leadInfo,
-          user: id,
+          leadsDetails,
+          isExcept,
           byLead: role,
           leadType: 'Genuine',
-          leadsDetails
+          user: manager.user, // Associate with the manager's user ID
+          status: 'New',
+          API_KEY: '', // Add appropriate API_KEY if needed
+          name: `${firstname} ${lastname}`,
+          subject: "Lead Created",
+          phone: mobile,
+          message: `Lead created for ${companyname}.`,
         });
-        savedLead = await newLead.save();
+        await managerNotification.save();
       }
-    } else if (role === 'user') {
-      // Directly save lead data if the role is user
-      const newLead = new Leads({
-        firstname,
-        lastname,
-        email,
-        mobile,
-        companyname,
-        leadInfo,
-        user: id,
-        byLead: role,
-        leadType: 'Genuine',
-        leadsDetails
-      });
-      savedLead = await newLead.save();
     }
 
-    // Respond with the appropriate data based on the role
-    if (role === 'admin' && newNotificationLead) {
-      res.status(200).json({ newNotificationLead, notificationResponse });
-    } else if (role === 'user' && savedLead) {
-      res.status(200).json({ savedLead });
-    } else {
-      res.status(200).json({ msg: "Lead created successfully", notificationResponse });
-    }
-
+    // Respond with the saved lead data and notification responses
+    res.status(200).json({
+      msg: "Lead created successfully",
+      savedLead,
+      notificationResponses,
+    });
   } catch (error) {
     console.error("Error creating lead:", error);
     res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
-
-
 
 
  
