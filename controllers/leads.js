@@ -1,14 +1,14 @@
 const asyncHandler = require("express-async-handler");
 const User = require("../models/user")
-const StatusType = require("../models/status")
-const UserStatus = require("../models/userStatus")
+// const StatusType = require("../models/status")
+// const UserStatus = require("../models/userStatus")
 const LeadQuality = require("../models/leadQuality")
 const admin = require('firebase-admin');
 // Load Firebase Admin SDK credentials
 const { sendNotification } = require('./sendNotification');
 const Notification = require("../models/notification")
 // Example usage in a route
-const sendEmailNotification = require("../utils.js/adminMail")
+// const sendEmailNotification = require("../utils.js/adminMail")
 
 const createLead = asyncHandler(async (req, res) => {
   try {
